@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>pyiron example notebook &#8212; pyiron_workflow_lammps</title>
+    <title>Static Lammps Test &#8212; pyiron_workflow_lammps</title>
   
   
   
@@ -168,7 +168,10 @@ const thebe_selector_output = ".output, .cell_output"
             </li>
         </ul>
         <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">pyiron example notebook</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Static Lammps Test</a></li>
+
+
+
 </ul>
 
     </div>
@@ -325,7 +328,9 @@ document.write(`
   </button>
 `);
 </script>
-
+<label class="sidebar-toggle secondary-toggle btn btn-sm" for="__secondary"title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</label>
 </div></div>
       
     </div>
@@ -336,11 +341,23 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>pyiron example notebook</h1>
+    <h1>Static Lammps Test</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
             
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Static Lammps Test</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#minimize-lammps-test">Minimize Lammps Test</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#nvt-lammps-test">NVT Lammps Test</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#npt-lammps">NPT Lammps</a></li>
+</ul>
+
+            </nav>
         </div>
     </div>
 </div>
@@ -350,276 +367,715 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article" role="main">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="pyiron-example-notebook">
-<h1>pyiron example notebook<a class="headerlink" href="#pyiron-example-notebook" title="Permalink to this heading">#</a></h1>
-<p>This is an example notebook to demonstrate the functionality of the publication template. The notebook loads an existing Si calculation and calculates the total energy using LAMMPS and the quip potential provided as additional resource in this repository.</p>
-<p>The calculation archive was created using the following commands:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyiron_atomistics</span> <span class="kn">import</span> <span class="n">Project</span>
-<span class="n">pr</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s2">&quot;old_calculation&quot;</span><span class="p">)</span>
-<span class="n">job</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">create</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">Lammps</span><span class="p">(</span><span class="n">job_name</span><span class="o">=</span><span class="s2">&quot;lmp_si&quot;</span><span class="p">)</span>
-<span class="n">job</span><span class="o">.</span><span class="n">structure</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">create</span><span class="o">.</span><span class="n">structure</span><span class="o">.</span><span class="n">ase</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="s2">&quot;Si&quot;</span><span class="p">)</span>
-<span class="n">job</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-<span class="n">pr</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">destination_path</span><span class="o">=</span><span class="s2">&quot;save&quot;</span><span class="p">)</span>
+  <div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ase.build</span> <span class="kn">import</span> <span class="n">bulk</span>
+<span class="kn">from</span> <span class="nn">ase</span> <span class="kn">import</span> <span class="n">Atoms</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="kn">from</span> <span class="nn">pyiron_workflow_lammps.engine</span> <span class="kn">import</span> <span class="n">LammpsEngine</span>
+<span class="kn">from</span> <span class="nn">pyiron_workflow_atomistics.dataclass_storage</span> <span class="kn">import</span> <span class="n">CalcInputMinimize</span>
+<span class="kn">from</span> <span class="nn">pyiron_workflow_atomistics.calculator</span> <span class="kn">import</span> <span class="n">calculate_structure_node</span>
+
+<span class="kn">import</span> <span class="nn">pyiron_workflow</span> <span class="k">as</span> <span class="nn">pwf</span>
+<span class="kn">from</span> <span class="nn">pyiron_workflow</span> <span class="kn">import</span> <span class="n">Workflow</span>
+
+<span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 </pre></div>
 </div>
-<p>The pyiron project class is imported using:</p>
+</div>
+</div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyiron_atomistics</span> <span class="kn">import</span> <span class="n">Project</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">lmp_cmd</span> <span class="o">=</span> <span class="s2">&quot;lmp&quot;</span>
 </pre></div>
 </div>
 </div>
 </div>
-<p>To validate the previous calculation have been successfully imported:</p>
+<section class="tex2jax_ignore mathjax_ignore" id="static-lammps-test">
+<h1>Static Lammps Test<a class="headerlink" href="#static-lammps-test" title="Permalink to this heading">#</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pr_data</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s2">&quot;pyiron/calculation&quot;</span><span class="p">)</span>
-<span class="n">pr_data</span><span class="o">.</span><span class="n">job_table</span><span class="p">()</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">structure</span> <span class="o">=</span> <span class="n">bulk</span><span class="p">(</span><span class="s2">&quot;Fe&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">structure</span><span class="o">.</span><span class="n">rattle</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">structure</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="s2">&quot;Al&quot;</span>
+<span class="n">structure</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="s2">&quot;Al&quot;</span>
+<span class="n">wf</span> <span class="o">=</span> <span class="n">Workflow</span><span class="p">(</span><span class="s2">&quot;EnginePrototype_Static_Lammps&quot;</span><span class="p">,</span> <span class="n">delete_existing_savefiles</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyiron_workflow_atomistics.dataclass_storage</span> <span class="kn">import</span> <span class="n">CalcInputStatic</span>
+<span class="n">EngineInput</span> <span class="o">=</span> <span class="n">CalcInputStatic</span><span class="p">()</span>
+
+<span class="n">Engine</span> <span class="o">=</span> <span class="n">LammpsEngine</span><span class="p">(</span><span class="n">EngineInput</span> <span class="o">=</span> <span class="n">EngineInput</span><span class="p">)</span>
+
+<span class="n">Engine</span><span class="o">.</span><span class="n">working_directory</span> <span class="o">=</span> <span class="s2">&quot;EnginePrototypeStatic&quot;</span>
+<span class="c1"># Local</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lmp_cmd</span><span class="si">}</span><span class="s2"> -in in.lmp -log static.log&quot;</span>
+<span class="c1"># Engine.command = &quot;lmp -in in.lmp -log static.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">input_script_pair_style</span> <span class="o">=</span> <span class="s2">&quot;eam/fs&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">lammps_log_filepath</span> <span class="o">=</span> <span class="s2">&quot;static.log&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">path_to_model</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/Al-Fe.eam.fs&quot;</span>
+
+<span class="n">wf</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">calculate_structure_node</span><span class="p">(</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+                                   <span class="n">calculation_engine</span> <span class="o">=</span> <span class="n">Engine</span><span class="p">)</span>
+<span class="n">wf</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="c1"># try:</span>
+<span class="c1">#     wf.run()</span>
+<span class="c1"># except Exception as e:</span>
+<span class="c1">#     print(&quot;Failed because of: &quot;, e)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">wf</span><span class="o">.</span><span class="n">calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">calc_output</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_html"><div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>status</th>
-      <th>chemicalformula</th>
-      <th>job</th>
-      <th>subjob</th>
-      <th>projectpath</th>
-      <th>project</th>
-      <th>timestart</th>
-      <th>timestop</th>
-      <th>totalcputime</th>
-      <th>computer</th>
-      <th>hamilton</th>
-      <th>hamversion</th>
-      <th>parentid</th>
-      <th>masterid</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>1</td>
-      <td>finished</td>
-      <td>Si2</td>
-      <td>lmp_si</td>
-      <td>/lmp_si</td>
-      <td>/home/jovyan/</td>
-      <td>calculation/old_calculation/</td>
-      <td>2021-03-19 16:21:40.376046</td>
-      <td>2021-03-19 16:21:41.573096</td>
-      <td>1.0</td>
-      <td>pyiron@MacBook-Pro.local#1</td>
-      <td>Lammps</td>
-      <td>0.1</td>
-      <td>None</td>
-      <td>None</td>
-    </tr>
-  </tbody>
-</table>
-</div></div></div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/root/miniconda3/envs/pyiron_workflow_atomistics/lib/python3.13/site-packages/pyiron_workflow_lammps/engine.py:96: RuntimeWarning: &#39;mode&#39; already set to &#39;static&#39; and also implied by EngineInput; no change.
+  warnings.warn(
+2025-09-19 18:53:50,721 - pyiron_log - WARNING - Directory &#39;EnginePrototypeStatic&#39; already exists. Existing files may be overwritten.
+</pre></div>
 </div>
-<p>Reload the existing calculation to continue with the previous structure:</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">job_reload</span> <span class="o">=</span> <span class="n">pr_data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;lmp_si&quot;</span><span class="p">)</span>
-<span class="n">structure_reload</span> <span class="o">=</span> <span class="n">job_reload</span><span class="o">.</span><span class="n">get_structure</span><span class="p">()</span>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current mode  static
+EngineOutput(
+  convergence=True,
+  energies=array([-1469.27846089]),
+  final_energy=-1469.27846089143,
+  final_forces=array([[  6.13513309,  -6.03997905,  -2.19362508],
+       [  6.67057912, -17.71773439,   2.04265948],
+       [  0.63682786,   0.74801201,  -3.51043526],
+       ...,
+       [ -0.19023408,   0.22291136,  -3.82646479],
+       [ -1.85526024,   1.32448821,   1.01985417],
+       [ -0.67355596,   6.44976384,   3.2978653 ]]),
+  final_results={&#39;generic&#39;: {&#39;eng&#39;: array([[-1.56214038e+00, -2.09264099e+00, -3.26796863e+00,
+        -3.56969386e+00, -1.23113901e+00, -2.68197153e+00,
+        -3.44805318e+00, -2.84289034e+00, -2.75922676e+00,
+        -4.12110056e+00, -2.06085787e+00, -5.31460043e-01,
+         5.10012512e+00, -3.99837691e+00, -2.31778745e+00,
+        -2.25427931e+00, -3.19508813e+00, -3.54082159e+00,
+        -2.88120703e+00, -2.80238365e+00, -3.86131759e+00,
+        -2.86910910e+00, -3.55425741e+00, -3.41468678e+00,
+        -3.06519088e+00, -3.16501157e+00, -2.05560693e+00,
+        -1.56906754e+00, -1.88854025e+00, -3.42954767e+00,
+        -3.79940379e+00, -3.24703425e+00,  8.90394971e-01,
+        -2.86589828e+00, -3.38285003e+00, -2.52823752e+00,
+        -2.48627925e+00, -2.94238738e+00, -3.40562840e+00,
+        -3.24520987e+00, -2.49224794e+00, -3.05597342e+00,
+        -3.93850056e+00, -3.64714921e+00, -2.45480835e+00,
+         6.52221730e+00, -2.91432638e+00, -2.75095670e+00,
+        -2.96488048e+00, -2.10705992e+00, -2.81156183e+00,
+        -3.79200324e+00, -5.08146189e-01, -1.32419711e+00,
+        -3.05766979e+00, -2.19217388e+00, -1.67492010e+00,
+        -2.99219005e+00, -3.11617841e+00,  1.10139005e+00,
+        -3.81910144e+00, -3.47263265e+00, -2.17950693e+00,
+        -1.59619910e+00, -3.67149280e+00, -3.81367408e+00,
+        -2.81970187e+00, -6.13548612e-01, -3.42207433e+00,
+         9.95138367e-01, -3.05845176e+00, -3.65800048e+00,
+        -3.66740042e+00, -2.87107839e+00, -2.76629733e+00,
+        -3.26006822e+00, -2.88492366e+00, -3.85824811e+00,
+         4.45924431e+00,  3.09357250e+00, -3.43339003e+00,
+        -3.16116752e+00, -2.50314296e+00, -2.21775860e+00,
+        -1.43418137e+00, -3.35889257e+00, -3.59371491e+00,
+         1.23806093e+01, -3.37826072e+00, -2.37375114e+00,
+        -3.13723338e+00, -3.64317028e+00, -3.94594509e+00,
+        -3.17575647e+00, -3.13333120e+00, -1.78266002e+00,
+         3.17069401e+00, -3.04846760e+00, -2.89307343e+00,
+        -3.62084533e+00, -3.01874260e+00, -3.54284350e+00,
+        -3.36650737e+00, -3.46409656e+00,  1.12428607e-01,
+        -3.83142969e+00, -3.24637503e+00, -2.70863942e+00,
+        -3.25846325e+00, -3.24375323e+00, -3.28295042e+00,
+        -2.67750300e+00, -2.71691925e+00, -3.39683455e+00,
+        -3.84985315e+00, -2.27245055e+00, -3.82520647e+00,
+        -2.20113470e+00, -3.10884151e+00, -3.41923025e+00,
+        -3.41665282e+00, -3.10551019e+00, -2.90375489e+00,
+        -2.98540119e+00, -2.27042839e+00, -3.79134048e+00,
+        -2.02633342e+00, -2.36163496e+00, -3.58942010e+00,
+        -3.07452502e+00, -3.37751543e+00, -2.88290760e+00,
+        -2.30308859e+00, -1.98018640e+00, -3.26167391e+00,
+        -1.87562394e+00, -2.01782804e+00, -2.43161348e+00,
+        -1.79511722e+00, -2.77160600e+00, -2.58983550e+00,
+        -1.57663950e+00, -3.19754155e+00,  2.40719776e+00,
+        -3.05538333e+00,  1.17695637e+00,  1.30006006e+00,
+        -3.73929762e+00, -1.43069565e+00, -2.98745538e+00,
+        -3.53079643e+00, -3.18719922e+00, -3.69529671e+00,
+        -2.55768679e+00, -3.56074639e+00, -3.73683809e+00,
+        -2.19938121e+00, -2.11377298e+00, -2.83041848e+00,
+        -6.26113031e-01, -6.36170885e-03, -2.60915434e+00,
+        -2.88575656e+00, -3.66557282e+00, -1.69000299e+00,
+        -3.12816406e+00, -1.63045565e+00,  5.71636722e+00,
+        -3.17773488e+00, -2.58762698e+00, -2.42165178e+00,
+        -3.40002804e+00, -3.65154580e+00, -2.88174710e+00,
+        -5.16018853e-01, -2.36457806e+00, -3.92433012e+00,
+         4.46598850e+00, -2.32236198e+00, -4.88301760e-02,
+        -2.90360784e+00,  4.18662072e+00, -3.17731178e+00,
+        -2.78528457e+00, -3.41817512e+00, -3.69316626e+00,
+        -3.62524045e+00, -3.43791304e+00,  6.99234744e-01,
+         5.78280942e-01, -2.32941483e+00,  3.51455427e+00,
+        -2.75278441e+00, -3.66249737e+00, -3.08108526e+00,
+        -2.46868206e+00, -3.69161162e+00, -3.70690978e+00,
+        -3.48779503e+00, -3.56544679e+00,  1.92513477e+00,
+        -2.88095120e+00, -3.55003409e+00,  4.14688263e-01,
+         2.01209548e+00, -3.79432820e+00, -3.96979163e+00,
+        -2.79746956e+00, -2.82222997e+00, -3.50552971e+00,
+         1.91570425e+00, -2.54262803e+00,  6.12651601e-01,
+        -7.29389848e-01, -2.87319360e+00,  4.79212501e-01,
+        -3.17286633e+00, -2.97383655e+00, -2.23462949e+00,
+        -3.67667352e+00, -3.55143834e+00, -3.57593436e+00,
+        -2.27490535e+00, -2.61603853e+00, -1.55239527e+00,
+        -2.86651567e+00, -2.15208580e+00, -2.95476020e+00,
+        -2.66119239e+00, -2.84845859e+00, -3.00618716e+00,
+        -3.29224704e+00, -1.83414590e+00, -2.96666360e+00,
+        -2.71927391e+00, -2.22035654e+00, -2.49395124e+00,
+        -3.86998664e+00, -3.13771331e+00, -3.47110803e+00,
+        -2.96610712e+00, -3.80267178e+00, -2.38183793e+00,
+        -3.05973568e+00, -3.06081720e+00, -7.37513595e-01,
+         6.02031295e+00,  5.76859086e+00, -3.21469894e+00,
+        -3.03128430e+00, -1.73777148e+00, -2.76360782e+00,
+        -3.19293603e+00, -2.32087874e+00, -9.77465928e-01,
+        -1.79601754e+00, -3.26260153e+00, -2.94398290e+00,
+        -3.64867630e+00, -3.01662180e+00, -2.63630582e+00,
+        -2.28812824e+00, -3.58613176e+00, -2.66588602e+00,
+        -3.02913145e+00, -3.61433880e+00, -3.53606089e+00,
+        -3.64068984e+00, -3.65440750e+00, -2.87052668e+00,
+        -3.06512191e+00, -3.15508171e+00,  4.09728395e-01,
+        -2.35136166e+00, -2.80301845e+00, -1.90694824e+00,
+        -3.06029069e+00, -3.57359860e+00, -3.76986129e+00,
+        -3.66923539e+00, -3.20307512e+00, -2.90121618e+00,
+        -2.44987712e+00, -2.44234972e+00, -3.44439187e+00,
+        -3.56211379e+00, -7.98630002e-01,  1.71448920e+02,
+        -3.71250154e+00, -2.88305923e+00, -2.73542840e+00,
+        -2.96269939e+00, -3.73397142e+00,  5.18606138e-01,
+         2.73145238e+00, -3.70201448e+00, -1.98301512e+00,
+        -3.24005595e+00, -3.76417485e+00, -3.23022666e+00,
+        -1.66232503e+00, -2.68750092e+00, -2.38925472e+00,
+        -2.38118274e+00, -2.59529092e+00, -3.13297194e+00,
+        -3.63481214e+00, -2.31680348e+00, -2.44659784e+00,
+        -2.57311406e+00, -1.04850904e-01, -1.48320887e+00,
+        -2.37992722e+00, -2.25073620e+00, -3.84575253e+00,
+        -1.72049108e+00, -2.94429696e+00, -2.17486399e+00,
+        -2.28076745e+00, -3.71929818e+00, -3.67065583e+00,
+        -3.19846186e+00, -2.75672078e+00, -2.57331514e+00,
+        -3.71807424e+00, -2.60448507e+00, -3.05329876e+00,
+        -1.95002863e+00, -3.30808927e+00, -3.20418971e+00,
+        -3.29462908e+00, -3.58776497e+00, -3.36352976e+00,
+        -3.00257449e+00, -3.29406126e+00, -3.59701406e+00,
+        -2.96031850e+00, -1.66352761e+00, -1.61875308e+00,
+        -2.89322193e+00, -3.50983542e+00,  3.51422571e+00,
+        -2.92024152e+00, -2.65796427e+00, -3.55700174e+00,
+        -4.60491667e-01, -3.15017466e+00, -3.89374202e+00,
+         5.29368384e+00,  1.11747639e+01, -3.39458931e+00,
+        -3.48084370e+00, -3.15465939e+00, -3.25478216e+00,
+        -3.07870339e+00, -2.94807555e+00, -3.11463994e+00,
+        -1.96641137e+00, -3.94502183e+00, -2.98118904e+00,
+        -3.72430248e+00, -3.15329049e+00, -3.65182224e+00,
+        -3.31493582e+00, -3.58106636e+00,  5.78529086e-02,
+        -3.21097551e+00, -2.71919564e+00, -2.90668869e+00,
+        -2.37027993e+00, -3.42871582e+00, -3.81003625e+00,
+        -3.26047437e+00, -3.38955092e+00, -3.25446491e+00,
+        -3.76052574e+00, -3.29562429e+00, -3.30824617e+00,
+        -2.84681799e+00, -3.20934966e+00, -3.60034085e+00,
+        -2.43171344e+00, -9.75285669e-01,  2.17717370e+00,
+        -3.01648074e+00, -1.27795613e+00,  5.50346186e-01,
+         1.72146181e+02, -2.43214798e+00, -3.44245481e+00,
+        -3.65853007e+00, -3.11112349e+00, -1.35875563e+00,
+        -3.61225720e+00,  3.86568272e+00, -3.27411850e+00,
+        -3.45970508e+00, -3.01020549e+00, -2.45862063e+00,
+        -3.35809029e+00, -3.29810531e+00, -3.66218735e+00,
+        -2.64061063e+00, -3.52110490e+00, -2.50368795e+00,
+        -2.39329894e+00, -3.46157358e+00, -2.89615171e+00,
+        -3.48518391e+00,  4.97598263e+00, -2.95706811e+00,
+         1.04540052e+01, -2.94303721e+00, -3.17574498e+00,
+        -2.26384784e+00, -1.66772599e+00, -3.70475738e+00,
+        -3.06582002e+00, -1.66289489e+00, -3.28016983e+00,
+        -2.55665200e+00,  9.83808229e+00, -2.61985650e+00,
+         9.67517770e-02, -1.75334264e+00, -2.45340176e+00,
+        -2.87615316e+00, -2.70869664e+00, -1.08123060e+00,
+        -2.68029160e+00,  3.66772361e+00, -2.74637859e+00,
+        -3.04839224e+00, -3.60818818e+00, -3.54180093e+00,
+        -3.82219367e+00, -3.79974566e+00, -2.90518061e+00,
+        -2.38436929e+00, -3.62173381e+00, -3.77653830e+00,
+        -3.18818205e+00, -2.92540143e+00, -1.95498375e+00,
+        -2.80167092e+00, -3.77050376e+00, -2.59193290e+00,
+        -3.36233068e+00,  6.24283874e+00,  1.04080811e+01,
+        -2.45935861e+00, -2.87204780e+00,  2.50378450e+00,
+        -3.20521601e+00, -3.68086386e+00, -3.31987708e+00,
+        -3.62652814e+00, -3.04329763e+00, -3.39102543e+00,
+        -2.47259776e+00,  6.25598584e-01, -3.56557205e+00,
+        -3.20627204e+00, -2.97781336e+00, -1.95162974e+00,
+        -8.93383762e-01, -3.41501742e+00, -2.70655180e+00,
+        -3.84810140e+00, -2.13440561e+00, -2.83670286e+00,
+         1.32987510e+00, -3.46370835e+00, -2.94301714e+00,
+        -3.53170191e+00,  2.93529619e-01, -3.91558668e+00,
+        -3.29150640e+00, -2.69762946e+00, -3.30949156e+00,
+        -2.72276047e+00,  1.65889812e+00, -1.89416486e+00,
+        -9.48653641e-01,  2.71993590e+00, -2.74446951e+00,
+        -2.72143483e+00, -2.81249416e+00, -3.73716428e+00,
+        -2.49005836e+00, -3.47310377e+00, -3.56445434e+00,
+        -3.58983520e+00, -3.13431786e+00, -2.58169492e+00,
+        -1.37981149e+00, -2.34386320e+00, -2.63815258e+00,
+        -1.18104765e+00, -2.97692557e+00, -3.05148891e+00,
+        -3.79615191e+00, -1.95492652e+00, -3.37077073e+00,
+        -3.15169819e+00, -2.92087011e+00, -1.38666597e+00,
+        -3.34092275e+00, -2.78731316e+00,  6.84982480e+00,
+        -2.08595202e+00, -3.75521440e+00, -1.92002497e+00,
+         2.58524352e+00, -3.35034739e+00, -3.39389320e+00,
+        -3.20420170e+00, -3.66373278e+00, -3.67725619e+00,
+        -3.14935915e+00, -2.12227654e+00, -3.85693877e+00,
+        -3.26134847e+00, -3.43990362e+00, -2.14144972e+00,
+        -3.32921916e+00, -3.39608804e+00, -9.46134486e-01,
+        -3.02375114e+00, -3.33558168e+00, -3.43835586e+00,
+         4.33036911e+00, -1.09219154e+00, -1.32506973e+00,
+        -9.73346275e-01,  1.65704259e+00, -3.39148621e+00,
+        -2.24715397e+00, -9.33138651e-01, -2.08542364e+00,
+        -3.57931536e+00, -3.27443613e+00, -3.74450967e+00,
+        -2.92993519e+00, -3.57093994e+00, -3.40714865e+00,
+        -2.39516368e+00, -3.11590496e+00, -2.68372654e+00,
+        -5.72314722e-01, -3.53303628e+00, -3.45970308e+00,
+        -3.75539479e+00,  5.03454752e+00,  6.75231719e+00,
+        -3.47094906e+00, -3.08290643e+00, -3.05630846e+00,
+        -3.66661343e+00, -1.39346591e+00, -2.97210782e+00,
+        -2.98690936e+00, -3.65318582e+00, -3.77805783e+00,
+        -2.71989225e+00, -3.84548067e+00, -3.46366893e+00,
+        -3.51777771e+00, -3.25738138e+00, -3.05712191e+00,
+         6.21570904e-01, -3.36801386e+00, -3.71243921e+00,
+        -3.23867916e+00, -1.40169374e+00, -3.49225554e+00,
+        -3.11311339e+00, -3.45793213e+00, -1.89933383e+00,
+        -1.75749904e+00, -3.19028093e+00, -3.23789620e+00,
+        -3.11115391e+00,  1.02558447e+00, -1.82965775e+00,
+        -2.26528016e+00, -9.84913652e-01, -1.39342485e+00,
+        -2.50043649e-01, -3.85038474e+00,  7.47526536e-01,
+        -2.39783776e+00, -3.72338659e+00, -2.15087703e+00,
+        -1.95357103e+00,  2.55330147e+00, -1.11314643e+00,
+        -2.66764880e+00, -3.56305728e+00, -3.64919965e+00,
+        -3.32443570e+00,  1.15176773e+00, -3.69543866e+00,
+        -3.23271925e+00, -1.91680294e+00, -1.51620119e+00,
+        -1.25813271e+00, -3.72924602e+00, -2.53478225e+00,
+        -3.98612329e+00, -3.79669964e+00,  3.55069096e+00,
+        -3.88357477e+00,  1.79398650e+00, -3.61409487e+00,
+        -6.84023496e-01, -3.44389495e+00, -3.25368879e+00,
+        -2.30263111e+00, -3.55197988e+00, -2.96504032e+00,
+         3.43039288e+00, -2.23574748e+00, -1.93445729e+00,
+        -3.39868763e+00, -2.15506883e+00, -2.18452610e+00,
+        -2.66880503e+00, -2.54305806e+00, -3.75425207e+00,
+        -2.87861387e+00, -3.34107989e+00, -2.94298249e+00,
+        -3.38769322e+00, -3.28013094e+00,  2.08498287e+00,
+        -2.82926159e+00, -2.59307314e+00, -2.29050301e+00,
+        -2.59107074e+00, -2.90060698e+00,  1.54668355e+01,
+         2.19526681e+01, -2.81924327e+00, -3.43915375e+00,
+        -2.74819669e+00, -1.04420543e+00, -3.30948463e+00,
+        -3.66152300e+00, -3.48057126e+00, -3.21728546e-01,
+        -3.20341397e+00,  1.87858878e+02, -3.19600293e+00,
+        -3.39542013e+00, -3.72990634e+00, -2.94299311e+00,
+        -1.37492787e-01, -3.11486118e+00, -3.40050357e+00,
+        -1.72963035e+00, -3.26702123e+00, -3.33455313e+00,
+        -3.61853909e+00, -3.50941826e+00, -3.73071772e+00,
+        -3.67878371e+00, -3.19069114e+00, -3.11332993e+00,
+        -3.39378107e+00, -2.79845323e+00, -3.24938013e+00,
+        -3.00641663e+00, -3.59395939e+00, -1.18197349e+00,
+         3.03594106e+00, -3.70791017e+00, -2.90935849e+00,
+        -2.27379605e+00, -1.31345794e+00, -3.33279145e+00,
+        -3.34202417e+00, -3.52254927e+00, -3.75581810e+00,
+        -3.30921534e+00, -3.43476879e+00, -1.60804188e+00,
+        -3.50895040e+00, -3.25231982e+00, -3.51894244e+00,
+        -3.65451217e+00, -3.37313668e+00, -3.08295166e+00,
+        -2.69556770e+00, -3.09363895e+00, -3.83617462e+00,
+        -2.10746499e+00, -1.93508587e+00, -2.39319028e+00,
+        -2.63108853e+00, -3.73759799e+00, -2.83358401e+00,
+        -3.69166054e+00, -3.27584295e+00, -3.45827869e+00,
+        -2.12801230e+00,  2.16565716e+00, -3.71622549e+00,
+        -3.66543307e+00, -3.24951609e+00, -3.58547388e+00,
+        -2.92000623e+00, -2.12033074e+00, -2.05603254e+00,
+        -3.60244739e+00, -1.11128516e+00, -3.30186863e+00,
+        -2.50968109e+00, -2.22353119e+00, -3.34251570e+00,
+        -3.77073910e+00,  4.85177842e-02,  3.41452652e-01,
+        -2.89558677e+00, -3.40561914e+00, -2.40325403e+00,
+        -1.80845653e+00, -2.61866958e+00, -1.23461198e+00,
+        -3.19576267e+00,  3.66488254e+00, -2.95028168e+00,
+        -3.11218324e+00, -3.20471210e+00, -1.43401566e+00,
+        -1.15812241e+00, -2.21565495e+00, -3.43644815e+00,
+        -3.86625921e+00,  1.10986103e+00, -2.92213062e+00,
+        -3.46549711e+00,  3.47447379e+00, -3.13088210e+00,
+        -9.26606266e-01, -2.79348091e+00, -3.67720935e+00,
+        -3.39860676e+00, -1.09090554e+00, -1.91489799e+00,
+        -1.58845150e+00, -2.10467236e+00,  1.89425907e+02,
+        -3.12493905e+00, -2.89845406e+00, -3.27040896e+00,
+        -3.69602924e+00, -2.45256740e+00, -3.66806154e+00,
+        -3.37814525e+00, -2.99292944e+00, -3.75384063e+00,
+        -3.71019132e+00, -3.55390011e+00, -3.12927713e+00,
+        -3.39924467e+00, -3.22334084e+00, -2.91449898e+00,
+        -6.67096352e-01, -1.28162287e+00, -1.83206471e+00,
+        -3.21315421e+00, -3.32755526e+00, -3.34878462e+00,
+        -3.65794224e+00, -1.09690079e+00, -2.44030484e+00,
+        -2.74188433e+00, -2.60229586e+00, -3.69127950e+00,
+         1.02612181e+00, -2.04398044e+00, -3.90408112e+00,
+        -3.61942062e+00, -3.23730081e+00, -3.48128123e+00,
+         2.05236105e+00, -3.11910860e+00,  9.62705168e-01,
+         1.52172184e+00, -3.42874876e+00, -2.77143022e+00,
+        -3.12241344e+00, -3.10170735e+00, -3.45884971e+00,
+        -3.37601734e+00,  1.59834661e+00,  2.59858604e+00,
+        -2.89851262e+00, -3.79609034e+00, -3.70214310e+00,
+        -3.29354683e+00, -2.40453968e+00, -2.57550465e+00,
+        -2.12967297e+00, -3.63854742e+00,  6.77867020e-01,
+        -3.31850107e+00, -3.23639904e+00, -3.13981018e+00,
+        -2.89371722e+00, -3.91544565e+00, -3.73170564e+00,
+        -1.47743564e+00, -2.76734878e+00, -3.80564013e+00,
+        -2.06495391e+00, -3.46804043e+00, -3.17584432e+00,
+        -3.29049231e+00, -2.98765316e+00, -3.44010114e+00,
+        -3.80142949e+00, -2.17080640e+00, -3.40528794e+00,
+        -2.00454770e+00, -3.49262726e+00, -2.81575254e+00,
+        -2.78160821e+00, -3.62211576e+00, -2.30928170e-01,
+        -2.49167481e+00, -2.59475920e+00, -3.29938345e+00,
+        -2.92953228e+00, -9.37297456e-01, -2.66296628e+00,
+        -3.36078389e+00, -3.47778773e+00, -3.47911722e+00,
+        -2.61397534e+00, -2.20282259e+00, -2.26699003e+00,
+        -2.93292196e+00, -2.55625220e+00, -3.85163362e+00,
+        -2.05901318e+00, -3.80860334e+00, -2.32101044e+00,
+        -1.06437031e+00, -1.63529774e+00, -3.58723894e+00,
+        -2.64936771e+00, -2.67572418e+00, -2.92866456e+00,
+        -3.05002808e+00, -3.38057036e+00, -2.25858423e+00,
+         6.71290934e+00,  3.25293797e+01, -3.20130746e+00,
+        -2.76795678e+00, -3.08572443e+00, -2.07350052e+00,
+        -3.40490472e+00, -2.82504754e+00, -3.44629313e+00,
+        -2.98929136e+00,  2.12122879e+00,  2.28983589e+00,
+        -2.77151079e+00, -3.28167006e+00, -3.74426482e+00,
+        -3.49920385e+00, -3.36214880e+00, -3.29166291e+00,
+        -3.29959846e+00, -3.56296766e+00, -1.13359046e+00,
+        -1.47925440e+00, -2.63217760e+00, -2.20929407e+00,
+        -2.91598626e+00, -1.56827365e+00, -3.46117140e+00,
+        -1.75985104e+00, -3.43921962e+00, -2.92947158e+00,
+        -3.60037136e+00, -1.65140327e+00, -3.76868287e+00,
+         3.26731183e-01, -3.26530149e+00, -1.92103636e+00,
+        -3.18928573e+00, -2.19783058e+00, -3.42322843e+00,
+        -3.57746308e+00, -2.84088742e+00, -3.41679249e+00,
+        -1.73080189e+00,  4.19349164e+00, -2.79270812e+00,
+        -1.86057448e+00, -7.51116833e-01, -2.63680193e+00,
+        -3.45879741e+00, -3.60154649e+00, -2.90640057e+00,
+        -2.97253924e+00, -3.56866648e+00,  2.04760807e+00,
+         2.23046270e-01, -1.30963715e+00,  2.45784429e-01,
+        -3.60651413e+00, -3.20409800e+00, -3.29995394e+00,
+        -3.23308852e+00, -2.96721785e+00, -3.34816438e+00,
+        -3.52606470e+00, -3.60306430e+00, -2.50251047e+00,
+        -3.24740920e+00, -3.58486863e+00, -2.68843023e+00,
+        -3.49072432e+00, -3.41129894e+00, -3.21098096e+00,
+        -3.39751087e+00, -3.00730893e+00, -3.10800830e+00,
+        -2.18148653e+00, -3.32167850e+00, -3.03147852e+00,
+        -2.98732886e+00, -3.59070658e+00, -3.15633360e+00,
+        -3.30075997e+00, -2.57787682e+00, -2.49225434e+00,
+        -3.28467590e+00, -2.80915509e+00, -3.46386321e+00,
+         8.44600070e+00, -2.46539532e+00, -3.10233590e+00,
+        -3.43881391e+00, -2.72965649e+00, -3.48126415e+00,
+        -2.09482338e+00, -1.21874956e+00, -3.14742777e+00,
+        -3.18347535e+00, -3.58739308e+00, -2.31382186e+00,
+        -1.96997026e+00, -3.38630518e+00, -3.68550256e+00,
+         3.01596305e+01, -2.96432597e+00, -3.09797241e+00,
+        -2.69983588e+00, -3.66282719e+00,  8.61656764e+00,
+        -3.70593816e+00, -3.70773108e+00, -3.33738369e+00,
+        -3.32632946e+00, -3.89009684e+00, -2.79102640e+00,
+        -3.61920578e+00, -2.26901933e+00, -3.23045907e+00,
+         8.95771263e+00,  1.21819030e+01, -2.51006857e+00,
+        -1.45423685e+00, -2.76766597e+00, -1.28247462e+00,
+        -2.74414084e+00, -2.28257593e+00, -1.19577074e+00,
+        -3.14514339e+00, -3.22451775e+00, -3.49805178e+00,
+        -3.03428788e+00, -3.00639832e+00, -7.02617592e-01,
+        -6.58690157e-01, -3.33036491e+00, -2.93346032e+00,
+        -2.10052326e+00, -2.05573306e+00, -2.93553694e+00,
+         4.22626558e+00, -3.58597115e+00, -3.36495714e+00,
+        -3.08508861e+00]]), &#39;steps&#39;: array([0]), &#39;natoms&#39;: array([1000.]), &#39;cells&#39;: array([[[ 2.48549291e+01, -1.37972573e-15,  2.75945145e-15],
+        [-8.28497636e+00,  2.34334519e+01, -3.52145293e-15],
+        [-2.48549291e+01, -3.51501778e+01,  2.02939646e+01]]]), &#39;indices&#39;: array([[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]), &#39;forces&#39;: array([[[  6.13513309,  -6.03997905,  -2.19362508],
+        [  6.67057912, -17.71773439,   2.04265948],
+        [  0.63682786,   0.74801201,  -3.51043526],
+        ...,
+        [ -0.19023408,   0.22291136,  -3.82646479],
+        [ -1.85526024,   1.32448821,   1.01985417],
+        [ -0.67355596,   6.44976384,   3.2978653 ]]]), &#39;velocities&#39;: array([[[0., 0., 0.],
+        [0., 0., 0.],
+        [0., 0., 0.],
+        ...,
+        [0., 0., 0.],
+        [0., 0., 0.],
+        [0., 0., 0.]]]), &#39;unwrapped_positions&#39;: array([[[ 2.20145111e-03,  2.36419304e-01,  7.60386963e-02],
+        [-1.17340441e+00, -1.01381409e+00,  2.30280845e+00],
+        [-1.87891471e+00, -2.35892035e+00,  4.55659204e+00],
+        ...,
+        [ 8.98490553e+00,  1.29013396e+01,  1.43487851e+01],
+        [ 8.50791755e+00,  1.16537870e+01,  1.60496754e+01],
+        [ 7.70254736e+00,  1.03140107e+01,  1.80720405e+01]]]), &#39;positions&#39;: array([[[ 2.20145111e-03,  2.36419304e-01,  7.60386963e-02],
+        [ 2.36815247e+01, -1.01381409e+00,  2.30280845e+00],
+        [-1.87891471e+00, -2.35892035e+00,  4.55659204e+00],
+        ...,
+        [ 8.98490553e+00,  1.29013396e+01,  1.43487851e+01],
+        [ 8.50791755e+00,  1.16537870e+01,  1.60496754e+01],
+        [ 7.70254736e+00,  1.03140107e+01,  1.80720405e+01]]]), &#39;temperature&#39;: array([0.]), &#39;energy_pot&#39;: array([-1469.27846089]), &#39;energy_tot&#39;: array([-1469.27846089]), &#39;volume&#39;: array([11819.9515]), &#39;pressures&#39;: array([[[85.09622316, -2.86284081,  1.42467383],
+        [-2.86284081, 59.1206932 , -2.84714432],
+        [ 1.42467383, -2.84714432, 57.71397876]]])}, &#39;lammps&#39;: {}},
+  final_stress=array([[85.09622316, -2.86284081,  1.42467383],
+       [-2.86284081, 59.1206932 , -2.84714432],
+       [ 1.42467383, -2.84714432, 57.71397876]]),
+  final_stress_tensor=None,
+  final_stress_tensor_voigt=None,
+  final_structure=Atoms(symbols=&#39;Al2Fe998&#39;, pbc=True, cell=[[24.85492908861339, -1.3797257274802071e-15, 2.7594514549604142e-15], [-8.28497636287113, 23.43345187262574, -3.52145293319693e-15], [-24.85492908861339, -35.15017780893861, 20.293964620053906]]),
+  final_volume=11819.951500000001,
+  forces=array([[[  6.13513309,  -6.03997905,  -2.19362508],
+        [  6.67057912, -17.71773439,   2.04265948],
+        [  0.63682786,   0.74801201,  -3.51043526],
+        ...,
+        [ -0.19023408,   0.22291136,  -3.82646479],
+        [ -1.85526024,   1.32448821,   1.01985417],
+        [ -0.67355596,   6.44976384,   3.2978653 ]]]),
+  magmoms=None,
+  n_ionic_steps=array([0]),
+  stresses=array([[[85.09622316, -2.86284081,  1.42467383],
+        [-2.86284081, 59.1206932 , -2.84714432],
+        [ 1.42467383, -2.84714432, 57.71397876]]]),
+  stresses_voigt=None,
+  structures=[Atoms(symbols=&#39;Al2Fe998&#39;, pbc=True, cell=[[24.85492908861339, -1.3797257274802071e-15, 2.7594514549604142e-15], [-8.28497636287113, 23.43345187262574, -3.52145293319693e-15], [-24.85492908861339, -35.15017780893861, 20.293964620053906]])])
 </pre></div>
 </div>
 </div>
 </div>
-<p>Create a new LAMMPS job object and assign the structure from the previous calculation:</p>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="minimize-lammps-test">
+<h1>Minimize Lammps Test<a class="headerlink" href="#minimize-lammps-test" title="Permalink to this heading">#</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pr_new</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s2">&quot;new_calculation&quot;</span><span class="p">)</span>
-<span class="n">job</span> <span class="o">=</span> <span class="n">pr_new</span><span class="o">.</span><span class="n">create</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">Lammps</span><span class="p">(</span><span class="n">job_name</span><span class="o">=</span><span class="s2">&quot;lmp_quip&quot;</span><span class="p">)</span>
-<span class="n">job</span><span class="o">.</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure_reload</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>List all available interatomic potentials:</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">job</span><span class="o">.</span><span class="n">view_potentials</span><span class="p">()</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">structure</span> <span class="o">=</span> <span class="n">bulk</span><span class="p">(</span><span class="s2">&quot;Fe&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">structure</span><span class="o">.</span><span class="n">rattle</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">structure</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="s2">&quot;Al&quot;</span>
+<span class="n">structure</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="s2">&quot;Al&quot;</span>
+<span class="n">wf</span> <span class="o">=</span> <span class="n">Workflow</span><span class="p">(</span><span class="s2">&quot;EnginePrototype&quot;</span><span class="p">,</span> <span class="n">delete_existing_savefiles</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">EngineInput</span> <span class="o">=</span> <span class="n">CalcInputMinimize</span><span class="p">()</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">energy_convergence_tolerance</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">force_convergence_tolerance</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="mi">1000000</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">max_evaluations</span> <span class="o">=</span> <span class="mi">1000000</span>
+
+<span class="n">Engine</span> <span class="o">=</span> <span class="n">LammpsEngine</span><span class="p">(</span><span class="n">EngineInput</span> <span class="o">=</span> <span class="n">EngineInput</span><span class="p">)</span>
+
+<span class="n">Engine</span><span class="o">.</span><span class="n">working_directory</span> <span class="o">=</span> <span class="s2">&quot;EnginePrototypeMinimize&quot;</span>
+<span class="c1"># Local</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lmp_cmd</span><span class="si">}</span><span class="s2"> -in in.lmp -log minimize.log&quot;</span>
+<span class="c1"># Engine.command = &quot;/root/github_dev/lammps/build/lmp -in in.lmp -log minimize.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">input_script_pair_style</span> <span class="o">=</span> <span class="s2">&quot;eam/fs&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">lammps_log_filepath</span> <span class="o">=</span> <span class="s2">&quot;minimize.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">path_to_model</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/Al-Fe.eam.fs&quot;</span>
+
+<span class="n">wf</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">calculate_structure_node</span><span class="p">(</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+                                   <span class="n">calculation_engine</span> <span class="o">=</span> <span class="n">Engine</span><span class="p">)</span>
+<span class="n">wf</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="c1"># try:</span>
+<span class="c1">#     wf.run()</span>
+<span class="c1"># except Exception as e:</span>
+<span class="c1">#     print(&quot;Failed because of: &quot;, e)</span>
+<span class="c1"># print(wf.calc.outputs.calc_output.value)</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">wf</span><span class="o">.</span><span class="n">calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">calc_output</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">energies</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_html"><div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>Config</th>
-      <th>Filename</th>
-      <th>Model</th>
-      <th>Name</th>
-      <th>Species</th>
-      <th>Citations</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>[pair_style quip\n, pair_coeff * * sw_example.xml "IP SW" 14\n]</td>
-      <td>[quip/sw_example.xml, quip/data_sw]</td>
-      <td>QUIP</td>
-      <td>Si-quip-xml</td>
-      <td>[Si]</td>
-      <td>{}</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>[pair_style sw\n, pair_coeff * * Si.sw Si\n]</td>
-      <td>[potential_LAMMPS/1985--Stillinger-F-H--Si--LAMMPS--ipr1/Si.sw]</td>
-      <td>NISTiprpy</td>
-      <td>1985--Stillinger-F-H--Si--LAMMPS--ipr1</td>
-      <td>[Si]</td>
-      <td>[{'Stillinger_1985': {'title': 'Computer simulation of local order in condensed phases of silicon', 'journal': 'Physical Review B', 'volume': '31', 'pages': '5262--5271', 'number': '8', 'doi': '10...</td>
-    </tr>
-    <tr>
-      <th>18</th>
-      <td>[pair_style tersoff\n, pair_coeff * * 1988_Si(B).tersoff Si\n]</td>
-      <td>[potential_LAMMPS/1988--Tersoff-J--Si-b--LAMMPS--ipr1/1988_Si(B).tersoff]</td>
-      <td>NISTiprpy</td>
-      <td>1988--Tersoff-J--Si-b--LAMMPS--ipr1</td>
-      <td>[Si]</td>
-      <td>[{'Tersoff_1988': {'title': 'New empirical approach for the structure and energy of covalent systems', 'journal': 'Physical Review B', 'volume': '37', 'pages': '6991--7000', 'number': '12', 'doi':...</td>
-    </tr>
-    <tr>
-      <th>19</th>
-      <td>[pair_style tersoff\n, pair_coeff * * 1988_Si(C).tersoff Si\n]</td>
-      <td>[potential_LAMMPS/1988--Tersoff-J--Si-c--LAMMPS--ipr1/1988_Si(C).tersoff]</td>
-      <td>NISTiprpy</td>
-      <td>1988--Tersoff-J--Si-c--LAMMPS--ipr1</td>
-      <td>[Si]</td>
-      <td>[{'Tersoff_1988': {'title': 'Empirical interatomic potential for silicon with improved elastic properties', 'journal': 'Physical Review B', 'volume': '38', 'pages': '9902--9905', 'number': '14', '...</td>
-    </tr>
-    <tr>
-      <th>27</th>
-      <td>[pair_style tersoff\n, pair_coeff * * 1989_SiC.tersoff Si C\n]</td>
-      <td>[potential_LAMMPS/1989--Tersoff-J--Si-C--LAMMPS--ipr1/1989_SiC.tersoff]</td>
-      <td>NISTiprpy</td>
-      <td>1989--Tersoff-J--Si-C--LAMMPS--ipr1</td>
-      <td>[Si, C]</td>
-      <td>[{'Tersoff_1989': {'title': 'Modeling solid-state chemistry: Interatomic potentials for multicomponent systems', 'journal': 'Physical Review B', 'volume': '39', 'pages': '5566--5568', 'number': '8...</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>917</th>
-      <td>[pair_style kim Sim_LAMMPS_TersoffZBL_DevanathanDiazdelaRubiaWeber_1998_SiC__SM_578912636995_000\n, pair_coeff * * Si C\n]</td>
-      <td>[]</td>
-      <td>OPENKIM</td>
-      <td>Sim_LAMMPS_TersoffZBL_DevanathanDiazdelaRubiaWeber_1998_SiC__SM_578912636995_000</td>
-      <td>[Si, C]</td>
-      <td>[{'R._1998': {'title': 'Displacement threshold energies in β-SiC', 'volume': '253', 'year': '1998', 'journal': 'Journal of Nuclear Materials', 'doi': '10.1016/S0022-3115(97)00304-8', 'author': ['D...</td>
-    </tr>
-    <tr>
-      <th>920</th>
-      <td>[pair_style kim Sim_LAMMPS_Vashishta_BroughtonMeliVashishta_1997_SiO__SM_422553794879_000\n, pair_coeff * * Si O\n]</td>
-      <td>[]</td>
-      <td>OPENKIM</td>
-      <td>Sim_LAMMPS_Vashishta_BroughtonMeliVashishta_1997_SiO__SM_422553794879_000</td>
-      <td>[Si, O]</td>
-      <td>[{'Q._1997': {'title': 'Direct atomistic simulation of quartz crystal oscillators: Bulk properties and nanoscale devices', 'volume': '56', 'year': '1997', 'journal': 'Physical Review B', 'doi': '1...</td>
-    </tr>
-    <tr>
-      <th>921</th>
-      <td>[pair_style kim Sim_LAMMPS_Vashishta_NakanoKaliaVashishta_1994_SiO__SM_503555646986_000\n, pair_coeff * * Si O\n]</td>
-      <td>[]</td>
-      <td>OPENKIM</td>
-      <td>Sim_LAMMPS_Vashishta_NakanoKaliaVashishta_1994_SiO__SM_503555646986_000</td>
-      <td>[Si, O]</td>
-      <td>[{'Aiichiro_1994': {'title': 'First sharp diffraction peak and intermediate-range order in amorphous silica: finite-size effects in molecular dynamics simulations', 'volume': '171', 'year': '1994'...</td>
-    </tr>
-    <tr>
-      <th>922</th>
-      <td>[pair_style kim Sim_LAMMPS_Vashishta_VashishtaKaliaNakano_2007_SiC__SM_196548226654_000\n, pair_coeff * * Si C\n]</td>
-      <td>[]</td>
-      <td>OPENKIM</td>
-      <td>Sim_LAMMPS_Vashishta_VashishtaKaliaNakano_2007_SiC__SM_196548226654_000</td>
-      <td>[Si, C]</td>
-      <td>[{'Priya_2007': {'title': 'Interaction potential for silicon carbide: A molecular dynamics study of elastic constants and vibrational density of states for crystalline and amorphous silicon carbid...</td>
-    </tr>
-    <tr>
-      <th>923</th>
-      <td>[pair_style kim Sim_LAMMPS_Vashishta_VashishtaKaliaRino_1990_SiO__SM_887826436433_000\n, pair_coeff * * Si O\n]</td>
-      <td>[]</td>
-      <td>OPENKIM</td>
-      <td>Sim_LAMMPS_Vashishta_VashishtaKaliaRino_1990_SiO__SM_887826436433_000</td>
-      <td>[Si, O]</td>
-      <td>[{'P._1990': {'title': 'Interaction potential for {SiO}2: A molecular-dynamics study of structural correlations', 'volume': '41', 'year': '1990', 'journal': 'Physical Review B', 'doi': '10.1103/ph...</td>
-    </tr>
-  </tbody>
-</table>
-<p>77 rows × 6 columns</p>
-</div></div></div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2025-09-19 18:53:50,991 - pyiron_log - WARNING - Directory &#39;EnginePrototypeMinimize&#39; already exists. Existing files may be overwritten.
+</pre></div>
 </div>
-<p>Select the LAMMPS quip potential provided in the resource directory and execute the calculation:</p>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current mode  minimize
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&lt;matplotlib.lines.Line2D at 0x7d01c1536710&gt;]
+</pre></div>
+</div>
+<img alt="_images/1249bdda2ec2a6f722010a9f2e5a6caf239732d31d9e8cb200266fbf1f643959.png" src="_images/1249bdda2ec2a6f722010a9f2e5a6caf239732d31d9e8cb200266fbf1f643959.png" />
+</div>
+</div>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="nvt-lammps-test">
+<h1>NVT Lammps Test<a class="headerlink" href="#nvt-lammps-test" title="Permalink to this heading">#</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">job</span><span class="o">.</span><span class="n">potential</span> <span class="o">=</span> <span class="s2">&quot;Si-quip-xml&quot;</span>
-<span class="n">job</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">structure</span> <span class="o">=</span> <span class="n">bulk</span><span class="p">(</span><span class="s2">&quot;Fe&quot;</span><span class="p">,</span> <span class="n">cubic</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">7</span><span class="p">]</span><span class="c1">#  * [10,10,10]</span>
+<span class="n">structure</span><span class="o">.</span><span class="n">rattle</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="c1"># structure[0].symbol = &quot;C&quot;</span>
+<span class="c1"># structure[10].symbol = &quot;C&quot;</span>
+<span class="n">wf</span> <span class="o">=</span> <span class="n">Workflow</span><span class="p">(</span><span class="s2">&quot;EnginePrototypeMD&quot;</span><span class="p">,</span> <span class="n">delete_existing_savefiles</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyiron_workflow_atomistics.dataclass_storage</span> <span class="kn">import</span> <span class="n">CalcInputMD</span>
+
+<span class="n">EngineInput</span> <span class="o">=</span> <span class="n">CalcInputMinimize</span><span class="p">()</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">energy_convergence_tolerance</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">force_convergence_tolerance</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="mi">1000000</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">max_evaluations</span> <span class="o">=</span> <span class="mi">1000000</span>
+
+<span class="n">Engine</span> <span class="o">=</span> <span class="n">LammpsEngine</span><span class="p">(</span><span class="n">EngineInput</span> <span class="o">=</span> <span class="n">EngineInput</span><span class="p">)</span>
+
+<span class="n">Engine</span><span class="o">.</span><span class="n">working_directory</span> <span class="o">=</span> <span class="s2">&quot;EnginePrototype_NVT_minimize&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lmp_cmd</span><span class="si">}</span><span class="s2"> -in in.lmp -log minimize.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">lammps_log_filepath</span> <span class="o">=</span> <span class="s2">&quot;minimize.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">input_script_pair_style</span> <span class="o">=</span> <span class="s2">&quot;eam/fs&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">path_to_model</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/Al-Fe.eam.fs&quot;</span>
+
+<span class="n">wf</span><span class="o">.</span><span class="n">relax_calc</span> <span class="o">=</span> <span class="n">calculate_structure_node</span><span class="p">(</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+                                         <span class="n">calculation_engine</span> <span class="o">=</span> <span class="n">Engine</span><span class="p">)</span>
+<span class="n">MD_EngineInput</span> <span class="o">=</span> <span class="n">CalcInputMD</span><span class="p">(</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;NVT&quot;</span><span class="p">,</span>
+                          <span class="n">temperature</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
+                          <span class="n">temperature_damping_timescale</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+                          <span class="n">seed</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+                          <span class="n">time_step</span> <span class="o">=</span> <span class="mf">0.001</span><span class="p">,</span>
+                          <span class="n">n_print</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+                          <span class="n">n_ionic_steps</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+                          <span class="n">thermostat</span> <span class="o">=</span> <span class="s2">&quot;langevin&quot;</span><span class="p">)</span>
+
+<span class="n">MD_Engine</span> <span class="o">=</span> <span class="n">LammpsEngine</span><span class="p">(</span><span class="n">EngineInput</span> <span class="o">=</span> <span class="n">MD_EngineInput</span><span class="p">)</span>
+
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">working_directory</span> <span class="o">=</span> <span class="s2">&quot;EnginePrototype_NVT/nvt&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lmp_cmd</span><span class="si">}</span><span class="s2"> -in in.lmp -log nvt.log&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">lammps_log_filepath</span> <span class="o">=</span> <span class="s2">&quot;nvt.log&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">input_script_pair_style</span> <span class="o">=</span> <span class="s2">&quot;eam/fs&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">path_to_model</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/Al-Fe.eam.fs&quot;</span>
+
+<span class="n">wf</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">calculate_structure_node</span><span class="p">(</span><span class="n">structure</span> <span class="o">=</span> <span class="n">wf</span><span class="o">.</span><span class="n">relax_calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">calc_output</span><span class="o">.</span><span class="n">final_structure</span><span class="p">,</span>
+                                   <span class="n">calculation_engine</span> <span class="o">=</span> <span class="n">MD_Engine</span><span class="p">)</span>
+<span class="n">wf</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="c1"># try:</span>
+<span class="c1">#     wf.run()</span>
+<span class="c1"># except Exception as e:</span>
+<span class="c1">#     print(&quot;Failed because of: &quot;, e)</span>
+<span class="c1"># print(wf.calc.outputs.calc_output.value)</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">wf</span><span class="o">.</span><span class="n">calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">calc_output</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">energies</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>The job lmp_quip was saved and received the ID: 2
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2025-09-19 18:53:51,596 - pyiron_log - WARNING - Directory &#39;EnginePrototype_NVT_minimize&#39; already exists. Existing files may be overwritten.
+2025-09-19 18:53:51,748 - pyiron_log - WARNING - Directory &#39;EnginePrototype_NVT/nvt&#39; already exists. Existing files may be overwritten.
 </pre></div>
 </div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current mode  minimize
+current mode  md
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&lt;matplotlib.lines.Line2D at 0x7d01c12c0050&gt;]
+</pre></div>
+</div>
+<img alt="_images/b5c02d2feb7cb8da505c4a0ed5227ebb27c67c28902c89f51267ef453980ed5a.png" src="_images/b5c02d2feb7cb8da505c4a0ed5227ebb27c67c28902c89f51267ef453980ed5a.png" />
 </div>
 </div>
-<p>Print the total energy of both calculation:</p>
+</section>
+<section class="tex2jax_ignore mathjax_ignore" id="npt-lammps">
+<h1>NPT Lammps<a class="headerlink" href="#npt-lammps" title="Permalink to this heading">#</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">job</span><span class="p">[</span><span class="s2">&quot;output/generic/energy_tot&quot;</span><span class="p">],</span> <span class="n">job_reload</span><span class="p">[</span><span class="s2">&quot;output/generic/energy_tot&quot;</span><span class="p">])</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">structure</span> <span class="o">=</span> <span class="n">bulk</span><span class="p">(</span><span class="s2">&quot;Fe&quot;</span><span class="p">,</span> <span class="n">cubic</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">7</span><span class="p">]</span><span class="c1">#  * [10,10,10]</span>
+<span class="n">structure</span><span class="o">.</span><span class="n">rattle</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="c1"># structure[0].symbol = &quot;C&quot;</span>
+<span class="c1"># structure[10].symbol = &quot;C&quot;</span>
+<span class="n">wf</span> <span class="o">=</span> <span class="n">Workflow</span><span class="p">(</span><span class="s2">&quot;EnginePrototypeMD&quot;</span><span class="p">,</span> <span class="n">delete_existing_savefiles</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyiron_workflow_atomistics.dataclass_storage</span> <span class="kn">import</span> <span class="n">CalcInputMD</span>
+
+<span class="n">EngineInput</span> <span class="o">=</span> <span class="n">CalcInputMinimize</span><span class="p">()</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">energy_convergence_tolerance</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">force_convergence_tolerance</span> <span class="o">=</span> <span class="mf">1e-5</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="mi">1000000</span>
+<span class="n">EngineInput</span><span class="o">.</span><span class="n">max_evaluations</span> <span class="o">=</span> <span class="mi">1000000</span>
+
+<span class="n">Engine</span> <span class="o">=</span> <span class="n">LammpsEngine</span><span class="p">(</span><span class="n">EngineInput</span> <span class="o">=</span> <span class="n">EngineInput</span><span class="p">)</span>
+
+<span class="n">Engine</span><span class="o">.</span><span class="n">working_directory</span> <span class="o">=</span> <span class="s2">&quot;EnginePrototype_NPT/minimize&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lmp_cmd</span><span class="si">}</span><span class="s2"> -in in.lmp -log minimize.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">lammps_log_filepath</span> <span class="o">=</span> <span class="s2">&quot;minimize.log&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">input_script_pair_style</span> <span class="o">=</span> <span class="s2">&quot;eam/fs&quot;</span>
+<span class="n">Engine</span><span class="o">.</span><span class="n">path_to_model</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/Al-Fe.eam.fs&quot;</span>
+
+<span class="n">wf</span><span class="o">.</span><span class="n">relax_calc</span> <span class="o">=</span> <span class="n">calculate_structure_node</span><span class="p">(</span><span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+                                         <span class="n">calculation_engine</span> <span class="o">=</span> <span class="n">Engine</span><span class="p">)</span>
+<span class="n">MD_EngineInput</span> <span class="o">=</span> <span class="n">CalcInputMD</span><span class="p">(</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;NPT&quot;</span><span class="p">,</span>
+                          <span class="n">temperature</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
+                          <span class="n">temperature_damping_timescale</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+                          <span class="n">pressure</span> <span class="o">=</span> <span class="mf">1e5</span><span class="p">,</span>
+                          <span class="n">pressure_damping_timescale</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+                          <span class="n">seed</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+                          <span class="n">time_step</span> <span class="o">=</span> <span class="mf">0.001</span><span class="p">,</span>
+                          <span class="n">n_print</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+                          <span class="n">n_ionic_steps</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+                          <span class="n">thermostat</span> <span class="o">=</span> <span class="s2">&quot;nose-hoover&quot;</span><span class="p">)</span>
+
+<span class="n">MD_Engine</span> <span class="o">=</span> <span class="n">LammpsEngine</span><span class="p">(</span><span class="n">EngineInput</span> <span class="o">=</span> <span class="n">MD_EngineInput</span><span class="p">)</span>
+
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">working_directory</span> <span class="o">=</span> <span class="s2">&quot;EnginePrototype_NPT/npt&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">command</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lmp_cmd</span><span class="si">}</span><span class="s2"> -in in.lmp -log minimize.log&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">lammps_log_filepath</span> <span class="o">=</span> <span class="s2">&quot;minimize.log&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">input_script_pair_style</span> <span class="o">=</span> <span class="s2">&quot;eam/fs&quot;</span>
+<span class="n">MD_Engine</span><span class="o">.</span><span class="n">path_to_model</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/Al-Fe.eam.fs&quot;</span>
+
+<span class="n">wf</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">calculate_structure_node</span><span class="p">(</span><span class="n">structure</span> <span class="o">=</span> <span class="n">wf</span><span class="o">.</span><span class="n">relax_calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">calc_output</span><span class="o">.</span><span class="n">final_structure</span><span class="p">,</span>
+                                   <span class="n">calculation_engine</span> <span class="o">=</span> <span class="n">MD_Engine</span><span class="p">)</span>
+<span class="n">wf</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="c1"># try:</span>
+<span class="c1">#     wf.run()</span>
+<span class="c1"># except Exception as e:</span>
+<span class="c1">#     print(&quot;Failed because of: &quot;, e)</span>
+<span class="c1"># print(wf.calc.outputs.calc_output[&quot;lammps_output&quot;].value)</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">wf</span><span class="o">.</span><span class="n">calc</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">calc_output</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">energies</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[-8.66999651] [-8.67319651]
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2025-09-19 18:53:52,672 - pyiron_log - WARNING - Directory &#39;EnginePrototype_NPT/minimize&#39; already exists. Existing files may be overwritten.
+2025-09-19 18:53:52,824 - pyiron_log - WARNING - Directory &#39;EnginePrototype_NPT/npt&#39; already exists. Existing files may be overwritten.
 </pre></div>
 </div>
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>current mode  minimize
+current mode  md
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&lt;matplotlib.lines.Line2D at 0x7d01c11b4b90&gt;]
+</pre></div>
+</div>
+<img alt="_images/5c12a9382d5f042513574fed22434e4e727590a44d0c31266119a8b006e5b22a.png" src="_images/5c12a9382d5f042513574fed22434e4e727590a44d0c31266119a8b006e5b22a.png" />
 </div>
 </div>
 </section>
@@ -669,6 +1125,24 @@ document.write(`
             </div>
             
             
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">Static Lammps Test</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#minimize-lammps-test">Minimize Lammps Test</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#nvt-lammps-test">NVT Lammps Test</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#npt-lammps">NPT Lammps</a></li>
+</ul>
+
+  </nav></div>
+
+</div></div>
               
             
           </div>
